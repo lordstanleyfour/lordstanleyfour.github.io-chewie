@@ -6,12 +6,12 @@ canvas.height = 500;
 const keys = [];
 const refugees = []; //refugee array
 const troops = []; //stormtrooper array
-const refugeeNumbers = 15; //number of refugees allowed at once
-const troopsNumbers = 1; //number of troops allowed at once(placeholder)
+const refugeeNumbers = 15; //number of refugees allowed at once 
+const troopsNumbers = 15; //number of troops allowed at once(placeholder)
 var score = 0; //number of refugees safely arrived
 var dead = 0;
 var refugeeSpawns = 0; //track total number of refugee spawns since start
-const maxRefugeeSpawns = 150;
+const maxRefugeeSpawns = 150; //150
 
 const playerSprite = new Image ();
 playerSprite.src = "assets/sprites/chewie.png";
@@ -19,6 +19,8 @@ const background = new Image ();
 background.src = "assets/background.png";
 const troopSprite = new Image ();
 troopSprite.src = "assets/sprites/stormtrooper.png";
+const boom = new Image ();
+boom.src = "assets/sprites/boom.png";
 
 const refugeeSprites = [];
 const refugee1 = new Image ();
@@ -141,12 +143,26 @@ class Troop {
     this.destX = 0;
     this.destY = 0;
     this.firing = false;
+    this.suicide = false;
+    this.dead = false;
     //does it need a var to initiate despawn?
   }
   draw(){
-    drawSprite(troopSprite, this.width*this.frameX, this.height*this.frameY, this.width, this.height, this.x, this.y, this.width, this.height);
-      if (this.frameX < 3 && this.moving) this.frameX++
-      else this.frameX = 0;
+    if (this.suicide === false){
+        drawSprite(troopSprite, this.width*this.frameX, this.height*this.frameY, this.width, this.height, this.x, this.y, this.width, this.height);
+        if (this.frameX < 3 && this.moving) this.frameX++
+        else this.frameX = 0;
+    }
+    else {
+      drawSprite(boom, this.width*this.frameX, this.height*this.frameY, this.width, this.height, this.x, this.y, this.width, this.height);
+      if (this.frameY < 8) {
+        this.frameX = 0;
+        this.frameY++;
+        if (this.frameY === 8){
+          this.dead = true;
+        }
+      }
+    }
   }
   update(){
     let sap = this.target; //couldn't figure out how to make the troop change target without declaring a local variable
@@ -158,41 +174,46 @@ class Troop {
     this.toTargetX = this.toTargetX / this.toTargetLength;
     this.toTargetY = this.toTargetY / this.toTargetLength;
 
-    //walk towards target if target on canvas
-    if (this.targetY < canvas.height-100 && this.targetX > 0){
-      this.x += this.toTargetX * this.speed;
-      this.y += this.toTargetY * this.speed;
-    }
-
-    //check if target has arrived and select a new target if they have
-    if (sap.arrived === true){
-      sap = refugees[(Math.floor(Math.random() * (refugees.length)))]
-      if (sap.arrived === false) {
-        this.target = sap;
+    if (refugees.length != 0) { //stops the troopers spazzing out endgame
+      //walk towards target if target on canvas
+      if (this.targetY < canvas.height-100 && this.targetX > 0){
+        this.x += this.toTargetX * this.speed;
+        this.y += this.toTargetY * this.speed;
       }
-    }
 
-    //check if target has arrived and select a new target if they have
-    if (sap.dead === true){
-      sap = refugees[(Math.floor(Math.random() * (refugees.length)))]
-      if (sap.dead === false) {
-        this.target = sap;
+      //check if target has arrived and select a new target if they have
+      if (sap.arrived === true){
+        sap = refugees[(Math.floor(Math.random() * (refugees.length)))]
+        if (sap.arrived === false) {
+          this.target = sap;
+        }
       }
+
+      //check if target has arrived and select a new target if they have
+      if (sap.dead === true){
+        sap = refugees[(Math.floor(Math.random() * (refugees.length)))]
+        if (sap.dead === false) {
+          this.target = sap;
+        }
+      }
+
+      //kill refugee on contact
+      if (this.toTargetLength < sap.width) {
+        sap.dead = true;
+        this.suicide = true;
+      }   
+
     }
-
-    //kill refugee on contact
-    if (this.toTargetLength < sap.width) {
-      sap.dead = true;
-    }
-
-
-    
-    
-
 
     //select a refugee (for loop to cycle through refugee array and pick a refugee based on some logic (try randomising first, then try psition logic)
     //shoot at the refugee
     //walk towards the refugee stopping to shoot periodically
+  }
+  remove(){
+    let i = troops.indexOf(this);
+    if (this.dead === true) {
+      troops.splice(i, 1);
+    }
   }
 }
 
@@ -206,7 +227,7 @@ refugeeSpawner = function() {
 }
 
 troopSpawner = function() {
-  if (troops.length < troopsNumbers){
+  if (troops.length < 1){
     for (i=0; i < troopsNumbers; i++) {
       troops.push(new Troop());
     }
@@ -287,6 +308,7 @@ function animate(){
     for (i=0; i < troops.length; i++){
       troops[i].draw();
       troops[i].update();
+      troops[i].remove();
     }
     troopSpawner();
 
@@ -296,7 +318,7 @@ function animate(){
 
     drawScore();
 
-    console.log(troops[0].toTargetLength);
+    console.log(troops);
     
   }
 }
