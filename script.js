@@ -6,12 +6,15 @@ canvas.height = 500;
 const keys = [];
 const refugees = []; //refugee array
 const troops = []; //stormtrooper array
+const shootFrame = [59, 61, 67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 127, 131]; //15 prime numbers for troppers shooting intervals
 const refugeeNumbers = 15; //number of refugees allowed at once 
 const troopsNumbers = 15; //number of troops allowed at once(placeholder)
 var score = 0; //number of refugees safely arrived
 var dead = 0;
+var killed = 0;
 var refugeeSpawns = 0; //track total number of refugee spawns since start
 const maxRefugeeSpawns = 150; //150
+finalScore = 0;
 
 const playerSprite = new Image ();
 playerSprite.src = "assets/sprites/chewie.png";
@@ -73,7 +76,6 @@ class Refugee {
     this.destY = 100;
     this.arrived = false;
     this.dead = false;
-    //this.toClosest = undefined;
   }
   draw(){
     drawSprite(this.sprite, this.width*this.frameX, this.height*this.frameY, this.width, this.height, this.x, this.y, this.width, this.height);
@@ -96,16 +98,18 @@ class Refugee {
     if (this.x > (this.destX-5) && this.x < (this.destX + 5) && this.y <= this.destY) {
       this.moving = false; //arrival logic
       this.arrived = true;
-    }
+    }   
+    
   }
   remove(){
-    let i = refugees.indexOf(this);
+
+    let j = refugees.indexOf(this);
     if (this.arrived === true) {
-      refugees.splice(i, 1);
+      refugees.splice(j, 1);
       score++;
     }
     if (this.dead === true) {
-      refugees.splice(i, 1);
+      refugees.splice(j, 1);
       dead++;
     }
   }
@@ -131,8 +135,8 @@ class Troop {
     this.frameX = 0;
     this.frameY = 1;
     this.moving = false;
-    this.x = 400; //placeholder values for sprite check
-    this.y = 250; //placeholder values for sprite check
+    this.x = (Math.floor(Math.random() * (1200 - 850))+850); //placeholder values for sprite check
+    this.y = (Math.floor(Math.random() * (450 - 150))+150); //placeholder values for sprite check
     this.speed = 7; //placeholder, define better later
     this.target = refugees[(Math.floor(Math.random() * (refugees.length)))]; //which index of the refugee array to take targetX and targetY from
     this.targetX = 0;
@@ -140,11 +144,21 @@ class Troop {
     this.toTargetX = 0;
     this.toTargetY = 0;
     this.toTargetLength = 0;
+    this.toPlayerX = 0;
+    this.toPlayerY = 0;
+    this.toPlayerLength = 0;
     this.destX = 0;
     this.destY = 0;
     this.firing = false;
     this.suicide = false;
     this.dead = false;
+    this.startTimer = null;
+    this.timer = null;
+    this.shooting = false;
+    this.blastX = null;
+    this.blastY = null;
+    this.shootingFrame = shootFrame[(Math.floor(Math.random() * (shootFrame.length)))];
+    this.stopX = (Math.floor(Math.random() * (400 - 300))+300);
     //does it need a var to initiate despawn?
   }
   draw(){
@@ -152,6 +166,15 @@ class Troop {
         drawSprite(troopSprite, this.width*this.frameX, this.height*this.frameY, this.width, this.height, this.x, this.y, this.width, this.height);
         if (this.frameX < 3 && this.moving) this.frameX++
         else this.frameX = 0;
+        if (this.timer > this.startTimer) this.timer++;
+        if (this.shooting = true) {
+          ctx.beginPath();
+          ctx.rect (this.blastX, this.blastY, 15, 3);
+          ctx.fillStyle = "red"
+          ctx.fill();
+          ctx.closePath();
+          this.blastX -= 20;
+        }
     }
     else {
       drawSprite(boom, this.width*this.frameX, this.height*this.frameY, this.width, this.height, this.x, this.y, this.width, this.height);
@@ -173,10 +196,26 @@ class Troop {
     this.toTargetLength = Math.sqrt(this.toTargetX * this.toTargetX + this.toTargetY * this.toTargetY);
     this.toTargetX = this.toTargetX / this.toTargetLength;
     this.toTargetY = this.toTargetY / this.toTargetLength;
+    this.toPlayerX = player.x - this.x;
+    this.toPlayerY = player.y - this.y;
+    this.toPlayerLength = Math.sqrt(this.toPlayerX * this.toPlayerX + this.toPlayerY * this.toPlayerY);
+
+    if (this.startTimer == null) this.startTimer = Date.now();
+    if (this.timer == null) this.timer = this.startTimer;
+    if (this.timer === this.startTimer) this.timer++;
+
+    if ((this.timer - this.startTimer) % this.shootingFrame === 0) {
+      this.blastX = this.x;
+      this.blastY = this.y+(this.height/2);
+      this.shooting = true;
+    }
+    if (this.blastX < 0) this.shooting = false;
+
+    if (this.x > this.stopX) this.x -= this.speed;
 
     if (refugees.length != 0) { //stops the troopers spazzing out endgame
       //walk towards target if target on canvas
-      if (this.targetY < canvas.height-100 && this.targetX > 0){
+      if (this.targetY < canvas.height && this.targetX > 0 && this.x < this.stopX){
         this.x += this.toTargetX * this.speed;
         this.y += this.toTargetY * this.speed;
       }
@@ -205,9 +244,11 @@ class Troop {
 
     }
 
-    //select a refugee (for loop to cycle through refugee array and pick a refugee based on some logic (try randomising first, then try psition logic)
-    //shoot at the refugee
-    //walk towards the refugee stopping to shoot periodically
+    if (this.toPlayerLength < this.width) {
+      this.suicide = true;
+      killed++;
+    }
+
   }
   remove(){
     let i = troops.indexOf(this);
@@ -227,18 +268,19 @@ refugeeSpawner = function() {
 }
 
 troopSpawner = function() {
-  if (troops.length < 1){
-    for (i=0; i < troopsNumbers; i++) {
+  if (troops.length < 10){
+    for (i=0; i < (troopsNumbers - troops.length); i++) {
       troops.push(new Troop());
     }
   }
 }
 
-drawScore = function(){
+drawScore = function() {
   ctx.font = "normal bolder 16px verdana";
   ctx.fillStyle = "rgb(0, 0, 0)";
   ctx.fillText ("Rescued refugees: "+score, canvas.width-200, 20);
   ctx.fillText ("Lost refugees: "+dead, canvas.width-200, 40);
+  finalScore = ((score + killed)-dead);
 }
 
 window.addEventListener("keydown", function (e){
@@ -288,6 +330,10 @@ function startAnimating(fps){ //function needed to kick off the animation by get
 }
 
 function animate(){
+  if (score + dead === maxRefugeeSpawns) {
+    finalScore = ((score + killed)-dead);
+    alert ("FINAL SCORE "+finalScore);
+    } else {
   requestAnimationFrame(animate); //pass the parent function to RAF to cause it to call itself recursively
   now = Date.now();
   elapsed = now - then;
@@ -317,9 +363,8 @@ function animate(){
     handlePlayerFrame();
 
     drawScore();
-
-    console.log(troops);
-    
+  
   }
+}
 }
 startAnimating(15);
