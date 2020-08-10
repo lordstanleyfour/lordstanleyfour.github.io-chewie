@@ -1,16 +1,24 @@
 <!DOCTYPE html>
 <html lang="en">
-	<head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <title>Document</title>
-        <link rel="stylesheet" href="style.css">
+        <head>
+                <meta charset="utf-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1">
+                <title>Document</title>
+                <link rel="stylesheet" href="style.css">
 	</head>
-	<body>
-        <canvas id="canvas"></canvas>
-        <script src="script.js"></script>
-        <p>Chewie is trying to save the refugees! All 150 of them!</p>
-        <p>Use the arrow keys to intercept the stormtroopers and stop them from blowing up the refugees</p>
-        <p>Press F5 to restart</p>
+	<body> 
+                <iframe src="silence.mp3" allow="autoplay" id="audio" style="display: none"></iframe>
+                <audio id=player autoplay>
+                <source src="retrofuture.mp3" type="audio/mpeg">
+                Your browser does not support the audio element.
+                </audio>
+                <canvas id="canvas"></canvas>
+                <script src="script.js"></script>
+                <p>Help chewie protect the refugees! There are 150 who need to be loaded on to the falcon.  Use your arrow keys to 
+                intercept the stormtroopers.  Luckily their aim is terrible...
+                </p>
+                <p id="credits">RetroFuture Clean by Kevin MacLeod
+                        Link: https://incompetech.filmmusic.io/song/4277-retrofuture-clean
+                        License: http://creativecommons.org/licenses/by/4.0/</p>
 	</body>
 </html>

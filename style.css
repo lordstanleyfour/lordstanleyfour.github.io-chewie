@@ -19,9 +19,13 @@ p {
     text-align: center;
     font-weight: bolder;
     color: yellow;
-    font-size: 1.5rem;
+    font-size: 1rem;
 }
 
 body {
     background-color: black;
+}
+
+#credits {
+    font-size: 0.3rem
 }

@@ -47,6 +47,23 @@ const refugee9 = new Image ();
 refugee9.src = "toki.png";
 refugeeSprites.push(refugee1, refugee2, refugee3, refugee4, refugee5, refugee6, refugee7, refugee8, refugee9);
 
+const deathSounds = [];
+const roar = new Audio ();
+roar.src = "roar.mp3";
+const bang = new Audio ();
+bang.src = "bang.mp3";
+const death1 = new Audio ();
+death1.src = "death1.mp3"
+const death2 = new Audio ();
+death2.src = "death2.wav"
+const death3 = new Audio ();
+death3.src = "death3.wav"
+const death4 = new Audio ();
+death4.src = "death4.wav"
+const death5 = new Audio ();
+death5.src = "death5.mp3"
+deathSounds.push(death1, death2, death3, death4, death5);
+
 function drawSprite(img, sX, sY, sW, sH, dX, dY, dW, dH){
   ctx.drawImage(img, sX, sY, sW, sH, dX, dY, dW, dH);
 }
@@ -151,6 +168,7 @@ class Troop {
     this.toPlayerLength = 0;
     this.destX = 0;
     this.destY = 0;
+    this.deathSound = deathSounds[Math.floor(Math.random() * deathSounds.length)];
     this.firing = false;
     this.suicide = false;
     this.dead = false;
@@ -247,6 +265,7 @@ class Troop {
       if (this.toTargetLength < sap.width) {
         sap.killed = true;
         this.suicide = true;
+        bang.play ();
       }   
 
     }
@@ -265,6 +284,7 @@ class Troop {
     if (this.dead === true && this.killed === true) {
       killed++;
       troops.splice(i, 1);
+      this.deathSound.play ();
     }
   }
 }
@@ -333,6 +353,11 @@ function handlePlayerFrame(){
   else player.frameX = 0;
 }
 
+function rawr(){
+  if (killed % 10 === 0) roar.play ();
+  if (score+dead === maxRefugeeSpawns) roar.play ();
+}
+
 let fps, fpsInterval, startTime, now, then, elapsed; //declare empty variables
 
 function startAnimating(fps){ //function needed to kick off the animation by getting system time and tying fps to system time.
@@ -372,7 +397,7 @@ function animate(){
     drawSprite(playerSprite, player.width*player.frameX, player.height*player.frameY, player.width, player.height, player.x, player.y, player.width, player.height);
     movePlayer();
     handlePlayerFrame();
-
+    rawr();
     drawScore();
     if (score+dead === maxRefugeeSpawns) {
       continueAnimating = false;
@@ -380,9 +405,10 @@ function animate(){
     
     //requestAnimationFrame(animate);
     }
-    console.log (continueAnimating);
+    console.log (troops[0]);
     }
   }
 }
 
 if (continueAnimating) startAnimating(15);
+
