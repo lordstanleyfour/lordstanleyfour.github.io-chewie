@@ -7,8 +7,8 @@ const keys = [];
 const refugees = []; //refugee array
 const troops = []; //stormtrooper array
 const shootFrame = [59, 61, 67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 127, 131]; //15 prime numbers for troppers shooting intervals
-const refugeeNumbers = 15; //number of refugees allowed at once 
-const troopsNumbers = 15; //number of troops allowed at once(placeholder)
+const refugeeNumbers = 1; //number of refugees allowed at once 
+const troopsNumbers = 1; //number of troops allowed at once(placeholder)
 var score = 0; //number of refugees safely arrived
 var dead = 0;
 var killed = 0;
@@ -17,33 +17,33 @@ const maxRefugeeSpawns = 150; //150
 finalScore = 0;
 
 const playerSprite = new Image ();
-playerSprite.src = "assets/sprites/chewie.png";
+playerSprite.src = "chewie.png";
 const background = new Image ();
-background.src = "assets/background.png";
+background.src = "background.png";
 const troopSprite = new Image ();
-troopSprite.src = "assets/sprites/stormtrooper.png";
+troopSprite.src = "stormtrooper.png";
 const boom = new Image ();
-boom.src = "assets/sprites/boom.png";
+boom.src = "boom.png";
 
 const refugeeSprites = [];
 const refugee1 = new Image ();
-refugee1.src = "assets/sprites/toby.png";
+refugee1.src = "toby.png";
 const refugee2 = new Image ();
-refugee2.src = "assets/sprites/tobywig.png";
+refugee2.src = "tobywig.png";
 const refugee3 = new Image ();
-refugee3.src = "assets/sprites/bith.png";
+refugee3.src = "bith.png";
 const refugee4 = new Image ();
-refugee4.src = "assets/sprites/c3p0.png";
+refugee4.src = "c3p0.png";
 const refugee5 = new Image ();
-refugee5.src = "assets/sprites/dart.png";
+refugee5.src = "dart.png";
 const refugee6 = new Image ();
-refugee6.src = "assets/sprites/falleen1.png";
+refugee6.src = "falleen1.png";
 const refugee7 = new Image ();
-refugee7.src = "assets/sprites/jawa.png";
+refugee7.src = "jawa.png";
 const refugee8 = new Image ();
-refugee8.src = "assets/sprites/oola.png";
+refugee8.src = "oola.png";
 const refugee9 = new Image ();
-refugee9.src = "assets/sprites/toki.png";
+refugee9.src = "toki.png";
 refugeeSprites.push(refugee1, refugee2, refugee3, refugee4, refugee5, refugee6, refugee7, refugee8, refugee9);
 
 function drawSprite(img, sX, sY, sW, sH, dX, dY, dW, dH){
@@ -75,6 +75,7 @@ class Refugee {
     this.destX = (Math.random() * (100 - 20) + 20); //Math.random() * (max-min) + min
     this.destY = 100;
     this.arrived = false;
+    this.killed = flase;
     this.dead = false;
   }
   draw(){
@@ -102,15 +103,15 @@ class Refugee {
     
   }
   remove(){
-
     let j = refugees.indexOf(this);
     if (this.arrived === true) {
-      refugees.splice(j, 1);
       score++;
-    }
-    if (this.dead === true) {
       refugees.splice(j, 1);
-      dead++;
+    }
+    if (this.killed === true) {      
+      refugees.splice(j, 1);
+      this.dead + true;
+      dead+=1;
     }
   }
 }
@@ -152,6 +153,7 @@ class Troop {
     this.firing = false;
     this.suicide = false;
     this.dead = false;
+    this.killed = false;
     this.startTimer = null;
     this.timer = null;
     this.shooting = false;
@@ -196,8 +198,8 @@ class Troop {
     this.toTargetLength = Math.sqrt(this.toTargetX * this.toTargetX + this.toTargetY * this.toTargetY);
     this.toTargetX = this.toTargetX / this.toTargetLength;
     this.toTargetY = this.toTargetY / this.toTargetLength;
-    this.toPlayerX = player.x - this.x;
-    this.toPlayerY = player.y - this.y;
+    this.toPlayerX = (player.x+20) - (this.x+16);
+    this.toPlayerY = (player.y+36) - (this.y+24);
     this.toPlayerLength = Math.sqrt(this.toPlayerX * this.toPlayerX + this.toPlayerY * this.toPlayerY);
 
     if (this.startTimer == null) this.startTimer = Date.now();
@@ -238,21 +240,25 @@ class Troop {
 
       //kill refugee on contact
       if (this.toTargetLength < sap.width) {
-        sap.dead = true;
+        sap.killed = true;
         this.suicide = true;
       }   
 
     }
 
-    if (this.toPlayerLength < this.width) {
+    if (this.toPlayerLength < this.height) {
       this.suicide = true;
-      killed++;
+      this.killed = true;
     }
 
   }
   remove(){
     let i = troops.indexOf(this);
-    if (this.dead === true) {
+    if (this.dead === true && this.killed === false) {
+      troops.splice(i, 1);
+    }
+    if (this.dead === true && this.killed === true) {
+      killed++;
       troops.splice(i, 1);
     }
   }
@@ -278,8 +284,10 @@ troopSpawner = function() {
 drawScore = function() {
   ctx.font = "normal bolder 16px verdana";
   ctx.fillStyle = "rgb(0, 0, 0)";
-  ctx.fillText ("Rescued refugees: "+score, canvas.width-200, 20);
-  ctx.fillText ("Lost refugees: "+dead, canvas.width-200, 40);
+  ctx.fillText ("Rescued refugees: "+score, canvas.width-210, 20);
+  ctx.fillText ("Lost refugees: "+dead, canvas.width-210, 40);
+  ctx.fillText ("Killed stormtroopers: "+killed, canvas.width-210, 60);
+  ctx.fillText ("Total score: "+finalScore, canvas.width-210, 80);
   finalScore = ((score + killed)-dead);
 }
 
