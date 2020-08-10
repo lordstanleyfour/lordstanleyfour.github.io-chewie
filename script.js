@@ -7,8 +7,8 @@ const keys = [];
 const refugees = []; //refugee array
 const troops = []; //stormtrooper array
 const shootFrame = [59, 61, 67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 127, 131]; //15 prime numbers for troppers shooting intervals
-const refugeeNumbers = 1; //number of refugees allowed at once 
-const troopsNumbers = 1; //number of troops allowed at once(placeholder)
+const refugeeNumbers = 15; //number of refugees allowed at once 
+const troopsNumbers = 20; //number of troops allowed at once(placeholder)
 var score = 0; //number of refugees safely arrived
 var dead = 0;
 var killed = 0;
@@ -75,7 +75,7 @@ class Refugee {
     this.destX = (Math.random() * (100 - 20) + 20); //Math.random() * (max-min) + min
     this.destY = 100;
     this.arrived = false;
-    this.killed = flase;
+    this.killed = false;
     this.dead = false;
   }
   draw(){
