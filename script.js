@@ -214,14 +214,18 @@ class Troop {
     }
     if (this.blastX < 0) this.shooting = false;
 
-    if (this.x > this.stopX) this.x -= this.speed;
+    if (this.x > this.stopX) {
+      this.x -= this.speed;
+      this.moving = true;
+    } else this.moving = false;
 
     if (refugees.length != 0) { //stops the troopers spazzing out endgame
       //walk towards target if target on canvas
       if (this.targetY < canvas.height && this.targetX > 0 && this.x < this.stopX){
         this.x += this.toTargetX * this.speed;
         this.y += this.toTargetY * this.speed;
-      }
+        this.moving = true;
+      } //else this.moving = false;
 
       //check if target has arrived and select a new target if they have
       if (sap.arrived === true){
@@ -340,16 +344,17 @@ function startAnimating(fps){ //function needed to kick off the animation by get
 
 function animate(){
   if (continueAnimating === true) {
-  requestAnimationFrame(animate); //pass the parent function to RAF to cause it to call itself recursively
-  now = Date.now();
-  elapsed = now - then;
-  if (elapsed > fpsInterval) { //check to see if it's time to draw the next frame
-    then = now - (elapsed % fpsInterval); //resets the clock to keep frame rate consistent
-    ctx.clearRect (0, 0, canvas.width, canvas.height);
-    ctx.drawImage(background, 0, 0, canvas.width, canvas.height);
-    requestAnimationFrame(animate);
+    requestAnimationFrame(animate); //pass the parent function to RAF to cause it to call itself recursively
+    now = Date.now();
+    elapsed = now - then;
+    if (elapsed > fpsInterval) { //check to see if it's time to draw the next frame
+      then = now - (elapsed % fpsInterval); //resets the clock to keep frame rate consistent
+      ctx.clearRect (0, 0, canvas.width, canvas.height);
+      ctx.drawImage(background, 0, 0, canvas.width, canvas.height);
+      
     //by giving requestAnimationFrame the name of it's parent function as a parameter it will run
     //repeatedly until infinity.  The function needs to be called once outside of itself to initialise.
+
     for (i=0; i < refugees.length; i++){
     refugees[i].draw();
     refugees[i].update();
@@ -369,8 +374,15 @@ function animate(){
     handlePlayerFrame();
 
     drawScore();
-  }
+    if (score+dead === maxRefugeeSpawns) {
+      continueAnimating = false;
+      alert (`Your final score is ${finalScore}\n\nPress F5 to restart!`)
+    
+    //requestAnimationFrame(animate);
+    }
+    console.log (continueAnimating);
+    }
   }
 }
-}
-startAnimating(15);
+
+if (continueAnimating) startAnimating(15);
