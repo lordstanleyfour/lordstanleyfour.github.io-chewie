@@ -15,7 +15,7 @@ var killed = 0;
 var refugeeSpawns = 0; //track total number of refugee spawns since start
 const maxRefugeeSpawns = 150; //150
 var finalScore = 0;
-var alert = false;
+var continueAnimating = true;
 
 const playerSprite = new Image ();
 playerSprite.src = "chewie.png";
@@ -339,11 +339,7 @@ function startAnimating(fps){ //function needed to kick off the animation by get
 }
 
 function animate(){
-  if (score + dead === maxRefugeeSpawns && alert === false) {
-    finalScore = ((score + killed)-dead);
-    alert ("FINAL SCORE "+finalScore);
-    alert = true;
-    } else {
+  if (continueAnimating === true) {
   requestAnimationFrame(animate); //pass the parent function to RAF to cause it to call itself recursively
   now = Date.now();
   elapsed = now - then;
@@ -373,7 +369,7 @@ function animate(){
     handlePlayerFrame();
 
     drawScore();
-  
+  }
   }
 }
 }
