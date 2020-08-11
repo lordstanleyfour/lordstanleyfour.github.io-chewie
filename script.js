@@ -1,4 +1,4 @@
-const canvas = document.getElementById("canvas");
+﻿const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 canvas.width = 800; //declares variables which let the script know what the html has drawn the canvas at
 canvas.height = 500;
@@ -6,6 +6,7 @@ canvas.height = 500;
 const keys = [];
 const refugees = []; //refugee array
 const troops = []; //stormtrooper array
+const blasts = [];
 const shootFrame = [59, 61, 67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 127, 131]; //15 prime numbers for troppers shooting intervals
 const refugeeNumbers = 15; //number of refugees allowed at once 
 const troopsNumbers = 20; //number of troops allowed at once(placeholder)
@@ -47,7 +48,7 @@ const refugee9 = new Image ();
 refugee9.src = "toki.png";
 refugeeSprites.push(refugee1, refugee2, refugee3, refugee4, refugee5, refugee6, refugee7, refugee8, refugee9);
 
-const deathSounds = [];
+/*const deathSounds = [];
 const roar = new Audio ();
 roar.src = "roar.mp3";
 const bang = new Audio ();
@@ -62,7 +63,7 @@ const death4 = new Audio ();
 death4.src = "death4.wav"
 const death5 = new Audio ();
 death5.src = "death5.mp3"
-deathSounds.push(death1, death2, death3, death4, death5);
+deathSounds.push(death1, death2, death3, death4, death5);*/
 
 function drawSprite(img, sX, sY, sW, sH, dX, dY, dW, dH){
   ctx.drawImage(img, sX, sY, sW, sH, dX, dY, dW, dH);
@@ -76,8 +77,67 @@ const player = {
   frameX: 0,
   frameY: 3,
   speed: 9, 
-  moving: false
+  moving: false,
+  shooting: false
 };
+
+class Blast { //for player bolts and troop blasts(move troop blast functions here if possible), push to blasts array
+  constructor(){
+    this.type = bolt; //(bolt or blast), start at null
+    this.x = 300; //start these at null, coords for testing only
+    this.y = 300;
+    this.width = 15; //(make w and h what it needs to be for blasts and multiply for bolts?)
+    this.height = 3;
+    this.speed = 20; //taken from blast bolt speed
+    this.hit = false; //change to true on collision for effects, (shape change for bolts)
+    this.expandFactor = 1; //increase base size of bolt each frame after hit, provides var to splice once certain size reached
+    this.dissipated = false;
+    this.boltTimer = null
+  }
+  draw(){
+    if (this.type = bolt && this.hit = false) {
+      //initial bolt size for collision detection prior to striking target
+      ctx.beginPath();
+      ctx.rect (this.x, this.y, this.width/2, this.height*2.5);
+      ctx.fillStyle = "green"
+      ctx.fill();
+      ctx.closePath();
+    }
+    if (this.type = bolt && this.hit = true) {
+      //after hitting target increase size as well as collision range for area of effect
+      ctx.beginPath();
+      ctx.rect (this.x, this.y, (this.width/2)*this.expandFactor, (this.height*2.5)*this.expandFactor;
+      ctx.fillStyle = "green"
+      ctx.fill();
+      ctx.closePath();
+    }
+    if (this.type = blast) {
+      ctx.beginPath();
+      ctx.rect (this.blastX, this.blastY, 15, 3);
+      ctx.fillStyle = "red"
+      ctx.fill();
+      ctx.closePath();
+    }
+    
+  }
+  update(){
+    //bolts stop and expand for 4 frames when hit detected then dissipate
+    if (this.type === bolt && this.hit === true && this.expandFactor <= 4){
+      this.speed = 0;
+      this.expandfactor ++;
+    }
+    if (this.type === bolt && this.hit === true && this.expandFactor > 4) {
+      this.dissipated = true;
+    }
+    
+  }
+  remove(){
+    let i = blasts.indexOf(this);
+    if (this.dissipated === true) {
+    blasts.splice(i, 1);
+  }
+
+}
 
 class Refugee {
   constructor(){
@@ -168,7 +228,7 @@ class Troop {
     this.toPlayerLength = 0;
     this.destX = 0;
     this.destY = 0;
-    this.deathSound = deathSounds[Math.floor(Math.random() * deathSounds.length)];
+    //this.deathSound = deathSounds[Math.floor(Math.random() * deathSounds.length)];
     this.firing = false;
     this.suicide = false;
     this.dead = false;
@@ -265,7 +325,7 @@ class Troop {
       if (this.toTargetLength < sap.width) {
         sap.killed = true;
         this.suicide = true;
-        bang.play ();
+        //bang.play ();
       }   
 
     }
@@ -284,7 +344,7 @@ class Troop {
     if (this.dead === true && this.killed === true) {
       killed++;
       troops.splice(i, 1);
-      this.deathSound.play ();
+      //this.deathSound.play ();
     }
   }
 }
@@ -304,6 +364,10 @@ troopSpawner = function() {
       troops.push(new Troop());
     }
   }
+}
+
+blastSpawner = function() {
+  if 
 }
 
 drawScore = function() {
@@ -353,10 +417,10 @@ function handlePlayerFrame(){
   else player.frameX = 0;
 }
 
-function rawr(){
+/*function rawr(){
   if (killed % 10 === 0) roar.play ();
   if (score+dead === maxRefugeeSpawns) roar.play ();
-}
+}*/
 
 let fps, fpsInterval, startTime, now, then, elapsed; //declare empty variables
 
@@ -397,7 +461,7 @@ function animate(){
     drawSprite(playerSprite, player.width*player.frameX, player.height*player.frameY, player.width, player.height, player.x, player.y, player.width, player.height);
     movePlayer();
     handlePlayerFrame();
-    rawr();
+    //rawr();
     drawScore();
     if (score+dead === maxRefugeeSpawns) {
       continueAnimating = false;
@@ -411,4 +475,3 @@ function animate(){
 }
 
 if (continueAnimating) startAnimating(15);
-
