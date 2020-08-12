@@ -79,7 +79,9 @@ const player = {
   frameY: 3,
   speed: 9, 
   moving: false,
-  shooting: false
+  shooting: false,
+  boltTimer: null,
+  boltInterval: 5000
 };
 
 class Bolt { //for player bolts, push to bolts array
@@ -93,7 +95,6 @@ class Bolt { //for player bolts, push to bolts array
     this.hit = false; //change to true on collision for effects, (shape change for bolts)
     this.expandFactor = 1; //increase base size of bolt each frame after hit, provides var to splice once certain size reached
     this.dissipated = false;
-    this.boltTimer = null
   }
   draw(){
     if (this.hit === false) {
@@ -115,10 +116,11 @@ class Bolt { //for player bolts, push to bolts array
     
   }
   update(){
+
     //bolts stop and expand for 4 frames when hit detected then dissipate
     if (this.hit === true && this.expandFactor <= 4){
       this.speed = 0;
-      this.expandfactor ++;
+      this.expandFactor ++;
     }
     if (this.hit === true && this.expandFactor > 4) {
       this.dissipated = true;
@@ -129,11 +131,18 @@ class Bolt { //for player bolts, push to bolts array
     this.y += this.dy;
     
   }
+
   remove(){
-    let i = blasts.indexOf(this);
+    let i = bolts.indexOf(this);
         if (this.dissipated === true) {
-        blasts.splice(i, 1);
+        bolts.splice(i, 1);
+        player.shooting = false;
     }
+    if (this.x > canvas.width || this.x < 0 || this.y > canvas.height || this.y < 0) {
+      bolts.splice(i, 1);
+      player.shooting = false;
+    }
+    
   }
 }
 
@@ -192,17 +201,7 @@ class Refugee {
   }
 }
 
-/* move enemy sprite towards player: 
-//calculate direction towards player
-toPlayerX = playerX - this.x;
-toPlayerY = playerY - this.y;
-//normalise
-toPlayerLength = Math.sqrt(toPlayerX * toPlayerX + toPlayerY * toPlayerY); //total distance to cover
-toPlayerX = toPlayerX / toPlayerlength; //proportion of total distance in X axis
-toPlayerY = toPlayerY / toPlayerLength; 
-//move towards player
-this.x += toPlayerX * this.speed;
-this.y += to playerY * this.speed;*/
+
 
 
 class Troop {
@@ -333,6 +332,12 @@ class Troop {
       this.killed = true;
     }
 
+    if (bolts.length != 0 && bolts[0].x > this.x && bolts[0].x < this.x + this.width && bolts[0].y > this.y && bolts[0].y < this.y + this.height){
+      bolts[0].hit = true;
+      this.suicide = true;
+      this.killed = true;
+    }
+
   }
   remove(){
     let i = troops.indexOf(this);
@@ -363,12 +368,6 @@ troopSpawner = function() {
     }
   }
 }
-
-/*blastSpawner = function() {
-  if (player.shooting){
-      
-  }
-}*/
 
 drawScore = function() {
   ctx.font = "normal bolder 16px verdana";
@@ -411,14 +410,24 @@ function movePlayer() {
     player.frameY = 2;
     player.moving = true;
   }
-  if (keys[32] && player.shooting === false){
+  if (keys[32] && player.shooting === false && player.boltTimer === null){
       player.shooting = true;
       bolts.push(new Bolt());
+      player.boltTimer= Date.now();
       if (keys[87] || keys[38]) bolts[0].dy = -bolts[0].speed;//up
       if (keys[65] || keys[37]) bolts[0].dx = -bolts[0].speed;//left
       if (keys[83] || keys[40]) bolts[0].dy = bolts[0].speed;//down
       if (keys[68] || keys[39]) bolts[0].dx = bolts[0].speed;//right
   }
+  if (keys[32] && player.shooting === false && (Date.now() > (player.boltTimer + player.boltInterval))){
+    player.shooting = true;
+    bolts.push(new Bolt());
+    player.boltTimer = Date.now();
+    if (keys[87] || keys[38]) bolts[0].dy = -bolts[0].speed;//up
+    if (keys[65] || keys[37]) bolts[0].dx = -bolts[0].speed;//left
+    if (keys[83] || keys[40]) bolts[0].dy = bolts[0].speed;//down
+    if (keys[68] || keys[39]) bolts[0].dx = bolts[0].speed;//right
+}
 }
 function handlePlayerFrame(){
   if (player.frameX < 3 && player.moving) player.frameX++
@@ -451,7 +460,7 @@ function animate(){
       
     //by giving requestAnimationFrame the name of it's parent function as a parameter it will run
     //repeatedly until infinity.  The function needs to be called once outside of itself to initialise.
-
+    if (Date.now() > (player.boltTimer + player.boltInterval)) player.shooting = false;
     for (i=0; i < refugees.length; i++){
     refugees[i].draw();
     refugees[i].update();
@@ -469,6 +478,7 @@ function animate(){
     drawSprite(playerSprite, player.width*player.frameX, player.height*player.frameY, player.width, player.height, player.x, player.y, player.width, player.height);
     movePlayer();
     handlePlayerFrame();
+
     for (i=0; i < bolts.length; i++) {
         bolts[i].draw();
         bolts[i].update();
@@ -490,7 +500,23 @@ function animate(){
 if (continueAnimating) startAnimating(15);
 
 /* to do list
-in troop update create a (if blasts.length = 1 && distance to blast is less than x) to initiate the epansion and dissipation of the blast as 
-well as remving the affected troops
-sort out a timer for the blast class
+remove dissipation - have the bolt wipe out everything in its path until its off the canvas
+or
+have it disappear on contact and remove the wait timer to shoot again
+or 
+change the bolt to be an aoe weapon with a fixed travel distance
+
+*/
  
+
+    /* move enemy sprite towards player: 
+//calculate direction towards player
+toPlayerX = playerX - this.x;
+toPlayerY = playerY - this.y;
+//normalise
+toPlayerLength = Math.sqrt(toPlayerX * toPlayerX + toPlayerY * toPlayerY); //total distance to cover
+toPlayerX = toPlayerX / toPlayerlength; //proportion of total distance in X axis
+toPlayerY = toPlayerY / toPlayerLength; 
+//move towards player
+this.x += toPlayerX * this.speed;
+this.y += to playerY * this.speed;*/
