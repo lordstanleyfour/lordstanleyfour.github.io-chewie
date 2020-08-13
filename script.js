@@ -1,4 +1,4 @@
-const canvas = document.getElementById("canvas");
+﻿const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 canvas.width = 800; //declares variables which let the script know what the html has drawn the canvas at
 canvas.height = 500;
@@ -6,7 +6,6 @@ canvas.height = 500;
 const keys = [];
 const refugees = []; //refugee array
 const troops = []; //stormtrooper array
-const blasts = [];
 const bolts = [];
 const shootFrame = [59, 61, 67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 127, 131]; //15 prime numbers for troppers shooting intervals
 const refugeeNumbers = 15; //number of refugees allowed at once 
@@ -80,8 +79,6 @@ const player = {
   speed: 9, 
   moving: false,
   shooting: false,
-  boltTimer: null,
-  boltInterval: 5000
 };
 
 class Bolt { //for player bolts, push to bolts array
@@ -93,56 +90,45 @@ class Bolt { //for player bolts, push to bolts array
     this.radius = 5; 
     this.speed = 20; //taken from blast bolt speed
     this.hit = false; //change to true on collision for effects, (shape change for bolts)
-    this.expandFactor = 1; //increase base size of bolt each frame after hit, provides var to splice once certain size reached
-    this.dissipated = false;
   }
   draw(){
-    if (this.hit === false) {
-      //initial bolt size for collision detection prior to striking target
       ctx.beginPath();
       ctx.arc (this.x, this.y, this.radius, 0, 2 * Math.PI);
-      ctx.fillStyle = "green"
+      ctx.fillStyle = "green";
       ctx.fill();
       ctx.closePath();
-    }
-    if (this.hit === true) {
-      //after hitting target increase size as well as collision range for area of effect
       ctx.beginPath();
-      ctx.arc (this.x, this.y, this.radius * this.expandFactor, 0, 2 * Math.PI);
-      ctx.fillStyle = "green"
+      ctx.arc (this.x, this.y, this.radius*0.75, 0, 2 * Math.PI);
+      ctx.fillStyle = "lightgreen";
       ctx.fill();
-      ctx.closePath();
+      ctx.beginPath();
+      ctx.arc (this.x, this.y, this.radius*0.5, 0, 2 * Math.PI);
+      ctx.fillStyle = "gold";
+      ctx.fill();
     }
-    
-  }
+     
   update(){
-
-    //bolts stop and expand for 4 frames when hit detected then dissipate
-    if (this.hit === true && this.expandFactor <= 4){
-      this.speed = 0;
-      this.expandFactor ++;
-    }
-    if (this.hit === true && this.expandFactor > 4) {
-      this.dissipated = true;
-    }
-
     //bolt movement
     this.x += this.dx;
-    this.y += this.dy;
+    this.y += this.dy;   
     
+    if (this.dy === 0) {
+      if (player.frameY === 3) this.dy = -this.speed;//up
+      if (player.frameY === 0) this.dy = this.speed;//down
+    }
+    if (this.dx === 0) {
+      if (player.frameY === 1) this.dx = -this.speed;//left
+      if (player.frameY === 2) this.dx = this.speed;//right
+    }
   }
+
 
   remove(){
     let i = bolts.indexOf(this);
-        if (this.dissipated === true) {
-        bolts.splice(i, 1);
-        player.shooting = false;
-    }
     if (this.x > canvas.width || this.x < 0 || this.y > canvas.height || this.y < 0) {
       bolts.splice(i, 1);
       player.shooting = false;
-    }
-    
+    }    
   }
 }
 
@@ -410,24 +396,14 @@ function movePlayer() {
     player.frameY = 2;
     player.moving = true;
   }
-  if (keys[32] && player.shooting === false && player.boltTimer === null){
+  if (keys[32] && player.shooting === false && player.moving === true){
       player.shooting = true;
       bolts.push(new Bolt());
-      player.boltTimer= Date.now();
       if (keys[87] || keys[38]) bolts[0].dy = -bolts[0].speed;//up
       if (keys[65] || keys[37]) bolts[0].dx = -bolts[0].speed;//left
       if (keys[83] || keys[40]) bolts[0].dy = bolts[0].speed;//down
       if (keys[68] || keys[39]) bolts[0].dx = bolts[0].speed;//right
   }
-  if (keys[32] && player.shooting === false && (Date.now() > (player.boltTimer + player.boltInterval))){
-    player.shooting = true;
-    bolts.push(new Bolt());
-    player.boltTimer = Date.now();
-    if (keys[87] || keys[38]) bolts[0].dy = -bolts[0].speed;//up
-    if (keys[65] || keys[37]) bolts[0].dx = -bolts[0].speed;//left
-    if (keys[83] || keys[40]) bolts[0].dy = bolts[0].speed;//down
-    if (keys[68] || keys[39]) bolts[0].dx = bolts[0].speed;//right
-}
 }
 function handlePlayerFrame(){
   if (player.frameX < 3 && player.moving) player.frameX++
@@ -492,7 +468,8 @@ function animate(){
     
     //requestAnimationFrame(animate);
     }
-    console.log (bolts);
+    console.log (player.frameY);
+    console.log(player.moving);
     }
   }
 }
