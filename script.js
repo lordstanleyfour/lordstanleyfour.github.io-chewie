@@ -1,23 +1,25 @@
-﻿const canvas = document.getElementById("canvas");
+//COMPLETED BUILD
+const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 canvas.width = 800; //declares variables which let the script know what the html has drawn the canvas at
 canvas.height = 500;
 
-const keys = [];
+const keys = []; //array for storing and splicing key presses
 const refugees = []; //refugee array
 const troops = []; //stormtrooper array
-const bolts = [];
+const bolts = []; //stores bolt attributes until despawn
 const shootFrame = [59, 61, 67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 127, 131]; //15 prime numbers for troppers shooting intervals
 const refugeeNumbers = 15; //number of refugees allowed at once 
 const troopsNumbers = 20; //number of troops allowed at once(placeholder)
-var score = 0; //number of refugees safely arrived
-var dead = 0;
-var killed = 0;
+var score = 0; //number of refugees safely arrived (adds 1 to final score)
+var dead = 0; //number of refugees killed by troops (subtracts 1 from final score)
+var killed = 0; //number of troops killed by player (adds 1 to final score)
 var refugeeSpawns = 0; //track total number of refugee spawns since start
-const maxRefugeeSpawns = 150; //150
-var finalScore = 0;
-var continueAnimating = true;
+const maxRefugeeSpawns = 150; //number of refugees to rescue
+var finalScore = 0; //(refugees saved + troops killed - refugees lost)
+var continueAnimating = true; //once last refugee despawned for whatever reason gets false and kills the animation loop to end the game and allow restart
 
+//sprites and images
 const playerSprite = new Image ();
 playerSprite.src = "chewie.png";
 const background = new Image ();
@@ -48,9 +50,12 @@ const refugee9 = new Image ();
 refugee9.src = "toki.png";
 refugeeSprites.push(refugee1, refugee2, refugee3, refugee4, refugee5, refugee6, refugee7, refugee8, refugee9);
 
-/*const deathSounds = [];
+//audio
+const deathSounds = [];
 const roar = new Audio ();
 roar.src = "roar.mp3";
+const pew = new Audio ();
+pew.src = "pew.wav";
 const bang = new Audio ();
 bang.src = "bang.mp3";
 const death1 = new Audio ();
@@ -63,12 +68,14 @@ const death4 = new Audio ();
 death4.src = "death4.wav"
 const death5 = new Audio ();
 death5.src = "death5.mp3"
-deathSounds.push(death1, death2, death3, death4, death5);*/
+deathSounds.push(death1, death2, death3, death4, death5);
 
+//simplifies code to assign a sprite to an object by creating a function
 function drawSprite(img, sX, sY, sW, sH, dX, dY, dW, dH){
   ctx.drawImage(img, sX, sY, sW, sH, dX, dY, dW, dH);
 }
 
+//player object
 const player = {
   x: 200,
   y: 200,
@@ -81,17 +88,18 @@ const player = {
   shooting: false,
 };
 
-class Bolt { //for player bolts, push to bolts array
+//bolt (player weapon) object.  Only one bolt can be present at a time as collision detection for multiple bolts in the array using for loops within either the troop update or bolt update logic is crashin the programme
+class Bolt {
   constructor(){
-    this.x = player.x+(player.width/2); //start these at null, coords for testing only
+    this.x = player.x+(player.width/2); //starting position of bolt (middle of player sprite)
     this.y = player.y+(player.height/2);
-    this.dx = 0;
+    this.dx = 0; //change of direction attribute, related to keypress at time of firing
     this.dy = 0;
     this.radius = 5; 
-    this.speed = 20; //taken from blast bolt speed
-    this.hit = false; //change to true on collision for effects, (shape change for bolts)
+    this.speed = 20; 
   }
   draw(){
+    //three layers of ellipses consecutively smaller of different colours
       ctx.beginPath();
       ctx.arc (this.x, this.y, this.radius, 0, 2 * Math.PI);
       ctx.fillStyle = "green";
@@ -105,13 +113,12 @@ class Bolt { //for player bolts, push to bolts array
       ctx.arc (this.x, this.y, this.radius*0.5, 0, 2 * Math.PI);
       ctx.fillStyle = "gold";
       ctx.fill();
-    }
-     
+    }     
   update(){
     //bolt movement
     this.x += this.dx;
     this.y += this.dy;   
-    
+    //if the player is not moving the bolt will fire in the direction the player is standing facing
     if (this.dy === 0) {
       if (player.frameY === 3) this.dy = -this.speed;//up
       if (player.frameY === 0) this.dy = this.speed;//down
@@ -121,9 +128,8 @@ class Bolt { //for player bolts, push to bolts array
       if (player.frameY === 2) this.dx = this.speed;//right
     }
   }
-
-
   remove(){
+    //bolt is removed from the array when it leaves the screen
     let i = bolts.indexOf(this);
     if (this.x > canvas.width || this.x < 0 || this.y > canvas.height || this.y < 0) {
       bolts.splice(i, 1);
@@ -132,22 +138,23 @@ class Bolt { //for player bolts, push to bolts array
   }
 }
 
+//Refugee objects. 
 class Refugee {
   constructor(){
-    this.width = 32;
+    this.width = 32; //parameters required for drawSprite function, used to calculate which part of the spritesheet to draw
     this.height = 48;
     this.frameX = 0;
     this.frameY = 3;
-    this.x = (Math.random() * (150 - 0) + 0);
+    this.x = (Math.random() * (150 - 0) + 0); //starting position
     this.y = (Math.random() * (1250-550) + 550);//stagger starting y to simulate timed spawn start
     this.sprite = refugeeSprites[Math.floor(Math.random() * refugeeSprites.length)]; //randomise sprite
-    this.moving = false;
-    this.speed = (Math.random() * ((player.speed * 0.5) - (player.speed * 0.25)) + (player.speed * 0.25));
-    this.destX = (Math.random() * (100 - 20) + 20); //Math.random() * (max-min) + min
+    this.moving = false; //required to pause animation of sprite when it arrives at the destination
+    this.speed = (Math.random() * ((player.speed * 0.5) - (player.speed * 0.25)) + (player.speed * 0.25)); //vary movement speed for variety
+    this.destX = (Math.random() * (100 - 20) + 20); //aim for a slightly different X coord along the destination for variety
     this.destY = 100;
-    this.arrived = false;
-    this.killed = false;
-    this.dead = false;
+    this.arrived = false; //to trigger despawn and point counter once arrived at destination
+    this.killed = false; //trigger despawn and point counter if killed by trooper
+    this.dead = false; //trigger attacking trooper to select new target
   }
   draw(){
     drawSprite(this.sprite, this.width*this.frameX, this.height*this.frameY, this.width, this.height, this.x, this.y, this.width, this.height);
@@ -174,22 +181,20 @@ class Refugee {
     
   }
   remove(){
-    let j = refugees.indexOf(this);
+    let i = refugees.indexOf(this);
     if (this.arrived === true) {
       score++;
-      refugees.splice(j, 1);
+      refugees.splice(i, 1);
     }
     if (this.killed === true) {      
-      refugees.splice(j, 1);
-      this.dead + true;
+      refugees.splice(i, 1);
+      this.dead = true;
       dead+=1;
     }
   }
 }
 
-
-
-
+//stormtrooper objects
 class Troop {
   constructor(){
     this.width = 32;
@@ -197,11 +202,11 @@ class Troop {
     this.frameX = 0;
     this.frameY = 1;
     this.moving = false;
-    this.x = (Math.floor(Math.random() * (1200 - 850))+850); //placeholder values for sprite check
-    this.y = (Math.floor(Math.random() * (450 - 150))+150); //placeholder values for sprite check
-    this.speed = 7; //placeholder, define better later
+    this.x = (Math.floor(Math.random() * (1200 - 850))+850); //starting coords offscreen staggered for variety
+    this.y = (Math.floor(Math.random() * (450 - 150))+150); 
+    this.speed = 7; 
     this.target = refugees[(Math.floor(Math.random() * (refugees.length)))]; //which index of the refugee array to take targetX and targetY from
-    this.targetX = 0;
+    this.targetX = 0; //calculate which direction to move to intercept target, see bottom of code
     this.targetY = 0;
     this.toTargetX = 0;
     this.toTargetY = 0;
@@ -209,21 +214,17 @@ class Troop {
     this.toPlayerX = 0;
     this.toPlayerY = 0;
     this.toPlayerLength = 0;
-    this.destX = 0;
-    this.destY = 0;
-    //this.deathSound = deathSounds[Math.floor(Math.random() * deathSounds.length)];
-    this.firing = false;
-    this.suicide = false;
-    this.dead = false;
-    this.killed = false;
-    this.startTimer = null;
+    this.deathSound = deathSounds[Math.floor(Math.random() * deathSounds.length)]; //pick a random grunt to play on death by player
+    this.suicide = false; //when true triggers sprite change to explosion
+    this.dead = false; //when true triggers despawn
+    this.killed = false; //when true adds to point counter
+    this.startTimer = null; //timers for drawing blaster fire
     this.timer = null;
     this.shooting = false;
     this.blastX = null;
     this.blastY = null;
-    this.shootingFrame = shootFrame[(Math.floor(Math.random() * (shootFrame.length)))];
-    this.stopX = (Math.floor(Math.random() * (400 - 300))+300);
-    //does it need a var to initiate despawn?
+    this.shootingFrame = shootFrame[(Math.floor(Math.random() * (shootFrame.length)))];//pick a random time interval from the associated array so that all troopers are not firing predictably
+    this.stopX = (Math.floor(Math.random() * (400 - 300))+300); //slight pause for variety when troop comes into view before following selected target
   }
   draw(){
     if (this.suicide === false){
@@ -252,7 +253,7 @@ class Troop {
     }
   }
   update(){
-    let sap = this.target; //couldn't figure out how to make the troop change target without declaring a local variable
+    let sap = this.target; //logic for following selected target.  Bit of pythagoras
     this.targetX = sap.x;
     this.targetY = sap.y;
     this.toTargetX = this.targetX - this.x;
@@ -263,31 +264,30 @@ class Troop {
     this.toPlayerX = (player.x+20) - (this.x+16);
     this.toPlayerY = (player.y+36) - (this.y+24);
     this.toPlayerLength = Math.sqrt(this.toPlayerX * this.toPlayerX + this.toPlayerY * this.toPlayerY);
-
+    //set timers for shooting
     if (this.startTimer == null) this.startTimer = Date.now();
     if (this.timer == null) this.timer = this.startTimer;
     if (this.timer === this.startTimer) this.timer++;
-
+    //use modula so that shooting is only triggered once per shootingFrame frames.  This is why they're all prime numbers
     if ((this.timer - this.startTimer) % this.shootingFrame === 0) {
       this.blastX = this.x;
       this.blastY = this.y+(this.height/2);
       this.shooting = true;
     }
     if (this.blastX < 0) this.shooting = false;
-
+    //pause at stopX position
     if (this.x > this.stopX) {
       this.x -= this.speed;
       this.moving = true;
     } else this.moving = false;
-
+    //target selection logic
     if (refugees.length != 0) { //stops the troopers spazzing out endgame
       //walk towards target if target on canvas
       if (this.targetY < canvas.height && this.targetX > 0 && this.x < this.stopX){
         this.x += this.toTargetX * this.speed;
         this.y += this.toTargetY * this.speed;
         this.moving = true;
-      } //else this.moving = false;
-
+      }
       //check if target has arrived and select a new target if they have
       if (sap.arrived === true){
         sap = refugees[(Math.floor(Math.random() * (refugees.length)))]
@@ -295,35 +295,30 @@ class Troop {
           this.target = sap;
         }
       }
-
-      //check if target has arrived and select a new target if they have
+      //check if target has died and select a new target if they have
       if (sap.dead === true){
         sap = refugees[(Math.floor(Math.random() * (refugees.length)))]
         if (sap.dead === false) {
           this.target = sap;
         }
       }
-
       //kill refugee on contact
       if (this.toTargetLength < sap.width) {
         sap.killed = true;
         this.suicide = true;
-        //bang.play ();
+        bang.play ();
       }   
-
     }
-
+    //die on player contact
     if (this.toPlayerLength < this.height) {
       this.suicide = true;
       this.killed = true;
     }
-
+    //die on bolt contact
     if (bolts.length != 0 && bolts[0].x > this.x && bolts[0].x < this.x + this.width && bolts[0].y > this.y && bolts[0].y < this.y + this.height){
-      bolts[0].hit = true;
       this.suicide = true;
       this.killed = true;
     }
-
   }
   remove(){
     let i = troops.indexOf(this);
@@ -333,20 +328,20 @@ class Troop {
     if (this.dead === true && this.killed === true) {
       killed++;
       troops.splice(i, 1);
-      //this.deathSound.play ();
+      this.deathSound.play ();
     }
   }
 }
-
+//add refugees to the game and keep count of spawns
 refugeeSpawner = function() {
   if (refugeeSpawns < maxRefugeeSpawns && refugees.length < refugeeNumbers){
-    for(i=0; i < refugeeNumbers; i++) { //add refugees to the game
+    for(i=0; i < refugeeNumbers; i++) {
       refugees.push(new Refugee());
       refugeeSpawns++;
     }
   }
 }
-
+//add troops to the game and keep them coming until the game ends
 troopSpawner = function() {
   if (troops.length < 10){
     for (i=0; i < (troopsNumbers - troops.length); i++) {
@@ -354,7 +349,7 @@ troopSpawner = function() {
     }
   }
 }
-
+//scorekeeping
 drawScore = function() {
   ctx.font = "normal bolder 16px verdana";
   ctx.fillStyle = "rgb(0, 0, 0)";
@@ -364,17 +359,16 @@ drawScore = function() {
   ctx.fillText ("Total score: "+finalScore, canvas.width-210, 80);
   finalScore = ((score + killed)-dead);
 }
-
+//event listeners for keypresses. keycode used as keys wasn't working properly with the version of chrome the programme was tested on
 window.addEventListener("keydown", function (e){
   keys[e.keyCode] = true;//when a key is pressed that key is added to the keys array
   player.moving = true;
 });
-
 window.addEventListener("keyup", function (e){
   delete keys[e.keyCode]; //when a key is released that key is deleted from the keys array.  This method prevents event listeners from interfering with one another and makes control more responsive.
   player.moving = false;
 });
-
+//player movement and shooting logic
 function movePlayer() {
   if ((keys[87] || keys[38]) && player.y > 100){//up
     player.y -= player.speed;
@@ -403,18 +397,21 @@ function movePlayer() {
       if (keys[65] || keys[37]) bolts[0].dx = -bolts[0].speed;//left
       if (keys[83] || keys[40]) bolts[0].dy = bolts[0].speed;//down
       if (keys[68] || keys[39]) bolts[0].dx = bolts[0].speed;//right
+      pew.play ();
   }
 }
+//animate the player sprite. Required as player was not built using a constructor
 function handlePlayerFrame(){
   if (player.frameX < 3 && player.moving) player.frameX++
   else player.frameX = 0;
 }
-
-/*function rawr(){
+//random chewie noises for ambiance
+function rawr(){
   if (killed % 10 === 0) roar.play ();
   if (score+dead === maxRefugeeSpawns) roar.play ();
-}*/
+}
 
+//animation logic. lifted wholesale from a tutorial
 let fps, fpsInterval, startTime, now, then, elapsed; //declare empty variables
 
 function startAnimating(fps){ //function needed to kick off the animation by getting system time and tying fps to system time.
@@ -424,6 +421,7 @@ function startAnimating(fps){ //function needed to kick off the animation by get
   animate();
 }
 
+//where the magic happens
 function animate(){
   if (continueAnimating === true) {
     requestAnimationFrame(animate); //pass the parent function to RAF to cause it to call itself recursively
@@ -431,62 +429,52 @@ function animate(){
     elapsed = now - then;
     if (elapsed > fpsInterval) { //check to see if it's time to draw the next frame
       then = now - (elapsed % fpsInterval); //resets the clock to keep frame rate consistent
-      ctx.clearRect (0, 0, canvas.width, canvas.height);
+      ctx.clearRect (0, 0, canvas.width, canvas.height); //gets rid of everything and draws fresh
       ctx.drawImage(background, 0, 0, canvas.width, canvas.height);
       
-    //by giving requestAnimationFrame the name of it's parent function as a parameter it will run
-    //repeatedly until infinity.  The function needs to be called once outside of itself to initialise.
-    if (Date.now() > (player.boltTimer + player.boltInterval)) player.shooting = false;
-    for (i=0; i < refugees.length; i++){
-    refugees[i].draw();
-    refugees[i].update();
-    refugees[i].remove();
-    }
-    refugeeSpawner();
+      //by giving requestAnimationFrame the name of it's parent function as a parameter it will run
+      //repeatedly until infinity.  The function needs to be called once outside of itself to initialise.
 
-    for (i=0; i < troops.length; i++){
-      troops[i].draw();
-      troops[i].update();
-      troops[i].remove();
-    }
-    troopSpawner();
+      for (i=0; i < refugees.length; i++){
+      refugees[i].draw();
+      refugees[i].update();
+      refugees[i].remove();
+      }
+      refugeeSpawner();
 
-    drawSprite(playerSprite, player.width*player.frameX, player.height*player.frameY, player.width, player.height, player.x, player.y, player.width, player.height);
-    movePlayer();
-    handlePlayerFrame();
+      for (i=0; i < troops.length; i++){
+        troops[i].draw();
+        troops[i].update();
+        troops[i].remove();
+      }
+      troopSpawner();
 
-    for (i=0; i < bolts.length; i++) {
-        bolts[i].draw();
-        bolts[i].update();
-        bolts[i].remove();
-    }
-    //rawr();
-    drawScore();
-    if (score+dead === maxRefugeeSpawns) {
-      continueAnimating = false;
-      alert (`Your final score is ${finalScore}\n\nPress F5 to restart!`)
-    
-    //requestAnimationFrame(animate);
-    }
-    console.log (player.frameY);
-    console.log(player.moving);
+      drawSprite(playerSprite, player.width*player.frameX, player.height*player.frameY, player.width, player.height, player.x, player.y, player.width, player.height);
+      movePlayer();
+      handlePlayerFrame();
+
+      for (i=0; i < bolts.length; i++) {
+          bolts[i].draw();
+          bolts[i].update();
+          bolts[i].remove();
+      }
+
+      rawr();
+      drawScore();
+
+      //ends the game
+      if (score+dead === maxRefugeeSpawns) {
+        continueAnimating = false;
+        alert (`Your final score is ${finalScore}\n\nPress F5 to restart!`)
+      }
     }
   }
 }
+if (continueAnimating) startAnimating(15); //starts the animation and condition prevents this from restarting the animation once the game has ended
 
-if (continueAnimating) startAnimating(15);
 
-/* to do list
-remove dissipation - have the bolt wipe out everything in its path until its off the canvas
-or
-have it disappear on contact and remove the wait timer to shoot again
-or 
-change the bolt to be an aoe weapon with a fixed travel distance
-
-*/
- 
-
-    /* move enemy sprite towards player: 
+//STUFF TO REMEMBER FOR NEXT TIME
+/* move enemy sprite towards player: 
 //calculate direction towards player
 toPlayerX = playerX - this.x;
 toPlayerY = playerY - this.y;
@@ -497,3 +485,5 @@ toPlayerY = toPlayerY / toPlayerLength;
 //move towards player
 this.x += toPlayerX * this.speed;
 this.y += to playerY * this.speed;*/
+
+//generate a random number within boundries //Math.random() * (max-min) + min
